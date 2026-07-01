@@ -1,7 +1,6 @@
-import google.generativeai as genai
-import os
-
-genai.configure(api_key=os.environ.get("GEMINI_API_KEY"))
+import json
+from google.genai import types
+from app.services.llm import client
 
 async def generate_unit_economics_verdict(metrics: dict) -> str:
     """
@@ -28,8 +27,10 @@ async def generate_unit_economics_verdict(metrics: dict) -> str:
     Write directly to the founder. Do not use markdown backticks for the overall response. Keep it punchy and actionable.
     """
     
-    model = genai.GenerativeModel("gemini-2.5-flash")
-    response = model.generate_content(prompt)
+    response = client.models.generate_content(
+        model='gemini-2.5-flash',
+        contents=prompt
+    )
     return response.text.strip()
 
 async def generate_gtm_plan_data(brand_brief_dict: dict, prd_content: str) -> dict:
@@ -41,7 +42,7 @@ async def generate_gtm_plan_data(brand_brief_dict: dict, prd_content: str) -> di
     Based on the following Brand Brief and PRD, generate a structured GTM plan.
     
     Brand Brief:
-    {brand_brief_dict}
+    {json.dumps(brand_brief_dict)}
     
     PRD:
     {prd_content}
@@ -58,8 +59,11 @@ async def generate_gtm_plan_data(brand_brief_dict: dict, prd_content: str) -> di
     }}
     """
     
-    model = genai.GenerativeModel("gemini-2.5-flash", generation_config={"response_mime_type": "application/json"})
-    response = model.generate_content(prompt)
-    import json
+    response = client.models.generate_content(
+        model='gemini-2.5-flash',
+        contents=prompt,
+        config=types.GenerateContentConfig(
+            response_mime_type="application/json"
+        )
+    )
     return json.loads(response.text)
-
