@@ -20,7 +20,7 @@ import zipfile
 import io
 import time
 
-router = APIRouter(prefix="/project/{project_id}/prototype", tags=["prototype"])
+router = APIRouter(prefix="/api/project/{project_id}/prototype", tags=["prototype"])
 
 @router.post("/generate")
 async def generate_prototype(project_id: str, db: AsyncSession = Depends(get_db), current_user: User = Depends(get_current_user)):
