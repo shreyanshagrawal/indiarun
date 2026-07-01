@@ -59,6 +59,17 @@ async def create_brand_brief(project_id: uuid.UUID, data: dict, db: AsyncSession
     
     return {"status": "ok", "id": brief.id}
 
+@router.put("/whitespace/approve")
+async def approve_whitespace(project_id: uuid.UUID, db: AsyncSession = Depends(get_db)):
+    result = await db.execute(select(BrandBrief).filter(BrandBrief.project_id == project_id))
+    brief = result.scalars().first()
+    if not brief:
+        raise HTTPException(status_code=404, detail="Brand brief not found")
+        
+    brief.approved = True
+    await db.commit()
+    return {"status": "ok"}
+
 @router.get("/whitespace")
 async def get_whitespace(project_id: uuid.UUID, db: AsyncSession = Depends(get_db)):
     from app.models.source_citation import SourceCitation
@@ -143,7 +154,10 @@ async def generate_definition(project_id: uuid.UUID, db: AsyncSession = Depends(
     
     brand_dict = {
         "whitespace_summary": brand.whitespace_summary,
-        "psychographic_target": brand.psychographic_target
+        "psychographic_target": brand.psychographic_target,
+        "recommended_attributes": brand.recommended_attributes,
+        "price_tier_map": brand.price_tier_map,
+        "brand_credibility_score": brand.brand_credibility_score
     }
     
     # 1. Personas

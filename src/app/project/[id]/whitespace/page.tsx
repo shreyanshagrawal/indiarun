@@ -4,7 +4,7 @@ import { useState, useEffect } from "react";
 import { useParams, useRouter } from "next/navigation";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/components/ui/card";
-import { ArrowLeft, Loader2, Sparkles, ChevronRight, BarChart3, AlertTriangle, Lightbulb, Link as LinkIcon } from "lucide-react";
+import { ArrowLeft, Loader2, Sparkles, ChevronRight, BarChart3, AlertTriangle, Lightbulb, Link as LinkIcon, Check, Settings2, Info } from "lucide-react";
 import { fetchWithAuth, API_BASE_URL } from "@/lib/api";
 import ReactMarkdown from "react-markdown";
 import { Badge } from "@/components/ui/badge";
@@ -136,9 +136,12 @@ export default function WhitespacePage() {
             </CardContent>
           </Card>
 
-          <Card>
-            <CardHeader className="pb-2">
+          <Card className={data.brief.psychographic_target?.insufficient_data ? "opacity-60 bg-muted/50" : ""}>
+            <CardHeader className="pb-2 flex flex-row items-center justify-between">
               <CardTitle className="flex items-center text-lg"><Lightbulb className="mr-2 w-5 h-5 text-yellow-500" /> Psychographic Target</CardTitle>
+              {data.brief.psychographic_target?.insufficient_data && (
+                <Badge variant="outline" className="text-muted-foreground"><Info className="w-3 h-3 mr-1"/> Limited Data</Badge>
+              )}
             </CardHeader>
             <CardContent>
               {data.brief.psychographic_target ? (
@@ -160,8 +163,8 @@ export default function WhitespacePage() {
         </div>
 
         {data.brief.brand_credibility_score !== null && (
-          <Card className="mb-6">
-            <CardHeader className="pb-2">
+          <Card className={`mb-6 ${data.brief.brand_credibility_score === 0 ? "opacity-60 bg-muted/50" : ""}`}>
+            <CardHeader className="pb-2 flex flex-row items-center justify-between">
               <CardTitle className="text-lg">Brand Credibility Score</CardTitle>
             </CardHeader>
             <CardContent>
@@ -174,9 +177,12 @@ export default function WhitespacePage() {
         )}
 
         {data.brief.price_tier_map?.tiers && (
-          <Card className="mb-6">
-            <CardHeader className="pb-2">
+          <Card className={`mb-6 ${data.brief.price_tier_map.insufficient_data ? "opacity-60 bg-muted/50" : ""}`}>
+            <CardHeader className="pb-2 flex flex-row items-center justify-between">
               <CardTitle className="text-lg">Price Tier Analysis</CardTitle>
+              {data.brief.price_tier_map.insufficient_data && (
+                <Badge variant="outline" className="text-muted-foreground"><Info className="w-3 h-3 mr-1"/> Limited Data</Badge>
+              )}
             </CardHeader>
             <CardContent>
               <div className="flex space-x-4">
@@ -196,9 +202,12 @@ export default function WhitespacePage() {
         )}
 
         <div className="grid grid-cols-1 md:grid-cols-2 gap-6 mb-6">
-          <Card>
-            <CardHeader className="pb-2">
+          <Card className={data.failure_risks?.length === 0 ? "opacity-60 bg-muted/50" : ""}>
+            <CardHeader className="pb-2 flex flex-row items-center justify-between">
               <CardTitle className="flex items-center text-lg"><AlertTriangle className="mr-2 w-5 h-5 text-red-500" /> Failure Simulation</CardTitle>
+              {data.failure_risks?.length === 0 && (
+                <Badge variant="outline" className="text-muted-foreground"><Info className="w-3 h-3 mr-1"/> Limited Data</Badge>
+              )}
             </CardHeader>
             <CardContent className="space-y-4">
               {data.failure_risks?.map((risk: any, i: number) => (
@@ -235,13 +244,32 @@ export default function WhitespacePage() {
               <ul className="text-xs text-muted-foreground space-y-1">
                 {data.citations.map((c: any, i: number) => (
                   <li key={i} className="truncate">
-                    <span className="font-medium">[{c.field_referenced}]</span> {c.source_url}
+                    <span className="font-medium">[{c.field_referenced}]</span> <a href={c.source_url} target="_blank" rel="noopener noreferrer" className="hover:underline text-blue-500">{c.source_url}</a>
                   </li>
                 ))}
               </ul>
             </CardContent>
           </Card>
         )}
+
+        <div className="flex flex-col sm:flex-row gap-4 justify-end mt-12 pt-6 border-t">
+           <Button variant="outline" size="lg" onClick={() => {
+              const angle = prompt("What different angle should we focus on? (e.g. B2B, budget tier, GenZ focus)");
+              if (angle) {
+                // Future enhancement: pass angle to handleGenerate
+                handleGenerate();
+              }
+           }}>
+             <Settings2 className="mr-2 w-4 h-4" /> Request Different Angle
+           </Button>
+           
+           <Button size="lg" className="bg-green-600 hover:bg-green-700 text-white" onClick={async () => {
+              await fetchWithAuth(`/project/${projectId}/whitespace/approve`, { method: "PUT" });
+              router.push(`/project/${projectId}/definition`);
+           }}>
+             <Check className="mr-2 w-5 h-5" /> Approve Brand Brief
+           </Button>
+        </div>
       </div>
     );
   }

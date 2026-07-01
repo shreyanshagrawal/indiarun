@@ -3,10 +3,32 @@ import json
 import requests
 from bs4 import BeautifulSoup
 from ddgs import DDGS
+import time
+import random
 from pydantic import BaseModel, Field
 from typing import List, Optional, Dict, Any
 from app.services.llm import client
 from google.genai import types
+
+def retry_with_backoff(retries=3, backoff_in_seconds=1):
+    def rwb(f):
+        def wrapper(*args, **kwargs):
+            x = 0
+            while True:
+                try:
+                    return f(*args, **kwargs)
+                except Exception as e:
+                    if x == retries:
+                        print(f"Failed after {retries} retries: {e}")
+                        raise e
+                    sleep = (backoff_in_seconds * 2 ** x) + random.uniform(0, 1)
+                    time.sleep(sleep)
+                    x += 1
+        return wrapper
+    return rwb
+
+# Simple in-memory cache for scraping to save API/network calls
+_SCRAPE_CACHE = {}
 
 class CompetitorSchema(BaseModel):
     product_name: str
@@ -27,28 +49,41 @@ def discover_competitors(category: str, known_competitors: List[str]) -> List[di
     query = f"{category} products " + " ".join(known_competitors or [])
     results = []
     results_urls = []
-    try:
+    @retry_with_backoff(retries=2, backoff_in_seconds=2)
+    def fetch_search_results(q):
+        if q in _SCRAPE_CACHE:
+            return _SCRAPE_CACHE[q]
         with DDGS() as ddgs:
-            # Get top 3 URLs
-            search_results = list(ddgs.text(query, max_results=3))
+            return list(ddgs.text(q, max_results=3))
+
+    try:
+        search_results = fetch_search_results(query)
+        _SCRAPE_CACHE[query] = search_results
+        
+        for res in search_results:
+            url = res.get("href")
+            if not url:
+                continue
             
-            for res in search_results:
-                url = res.get("href")
-                if not url:
-                    continue
+            if url in _SCRAPE_CACHE:
+                results.append(_SCRAPE_CACHE[url])
+                results_urls.append(url)
+                continue
                 
-                try:
-                    # Simple GET with timeout and headers
-                    headers = {"User-Agent": "Mozilla/5.0"}
-                    page = requests.get(url, headers=headers, timeout=5)
-                    if page.status_code == 200:
-                        soup = BeautifulSoup(page.text, "html.parser")
-                        text_content = soup.get_text(separator=' ', strip=True)
-                        results.append(text_content[:3000]) # Take first 3000 chars to avoid huge payload
-                        results_urls.append(url)
-                except Exception as e:
-                    print(f"Error scraping {url}: {e}")
-                    
+            try:
+                # Simple GET with timeout and headers
+                headers = {"User-Agent": "Mozilla/5.0"}
+                page = requests.get(url, headers=headers, timeout=5)
+                if page.status_code == 200:
+                    soup = BeautifulSoup(page.text, "html.parser")
+                    text_content = soup.get_text(separator=' ', strip=True)
+                    content = text_content[:3000]
+                    results.append(content) # Take first 3000 chars to avoid huge payload
+                    results_urls.append(url)
+                    _SCRAPE_CACHE[url] = content
+            except Exception as e:
+                print(f"Error scraping {url}: {e}")
+                
     except Exception as e:
         print(f"DDGS error: {e}")
         
@@ -211,23 +246,39 @@ def assess_brand_credibility(brand_name: str, positioning: str) -> dict:
     query = f"{brand_name} reviews reputation"
     results = []
     results_urls = []
-    try:
+    @retry_with_backoff(retries=2, backoff_in_seconds=2)
+    def fetch_cred_results(q):
+        if q in _SCRAPE_CACHE:
+            return _SCRAPE_CACHE[q]
         with DDGS() as ddgs:
-            search_results = list(ddgs.text(query, max_results=3))
-            for res in search_results:
-                url = res.get("href")
-                if not url:
-                    continue
-                try:
-                    headers = {"User-Agent": "Mozilla/5.0"}
-                    page = requests.get(url, headers=headers, timeout=5)
-                    if page.status_code == 200:
-                        soup = BeautifulSoup(page.text, "html.parser")
-                        text_content = soup.get_text(separator=' ', strip=True)
-                        results.append(text_content[:3000])
-                        results_urls.append(url)
-                except Exception as e:
-                    print(f"Error scraping credibility for {url}: {e}")
+            return list(ddgs.text(q, max_results=3))
+
+    try:
+        search_results = fetch_cred_results(query)
+        _SCRAPE_CACHE[query] = search_results
+        
+        for res in search_results:
+            url = res.get("href")
+            if not url:
+                continue
+                
+            if url in _SCRAPE_CACHE:
+                results.append(_SCRAPE_CACHE[url])
+                results_urls.append(url)
+                continue
+                
+            try:
+                headers = {"User-Agent": "Mozilla/5.0"}
+                page = requests.get(url, headers=headers, timeout=5)
+                if page.status_code == 200:
+                    soup = BeautifulSoup(page.text, "html.parser")
+                    text_content = soup.get_text(separator=' ', strip=True)
+                    content = text_content[:3000]
+                    results.append(content)
+                    results_urls.append(url)
+                    _SCRAPE_CACHE[url] = content
+            except Exception as e:
+                print(f"Error scraping credibility for {url}: {e}")
     except Exception as e:
         print(f"DDGS error in credibility: {e}")
         
@@ -277,7 +328,9 @@ def simulate_failure(idea_summary: str, precedents: List[dict]) -> List[dict]:
     {json.dumps(precedents, indent=2)}
     
     Select the top 2 to 3 most relevant historical failures that share similar risks or characteristics with the new idea.
-    For each, explain the similarity reason and provide a mitigation suggestion.
+    CRITICAL INSTRUCTION: Only surface a precedent with a specific, named similarity to the new product idea (e.g., "Relies on expensive proprietary consumables like Juicero", or "Assumes users want to wear a camera on their face like Google Glass"). Do NOT output vague or generic statements like "Many products fail due to poor marketing." If there are no highly specific matches, return an empty list.
+    
+    For each selected precedent, explain the specific similarity reason and provide a concrete mitigation suggestion.
     """
     
     try:
