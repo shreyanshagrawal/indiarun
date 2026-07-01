@@ -56,7 +56,7 @@ export default function DashboardPage() {
         <Card className="flex flex-col items-center justify-center p-12 text-center border-dashed">
           <CardHeader>
             <CardTitle>No projects yet</CardTitle>
-            <CardDescription>You haven't created any projects. Let's start with your first idea!</CardDescription>
+            <CardDescription>You haven&apos;t created any projects. Let&apos;s start with your first idea!</CardDescription>
           </CardHeader>
           <CardContent>
             <Link href="/project/new">

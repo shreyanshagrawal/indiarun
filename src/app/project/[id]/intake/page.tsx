@@ -17,7 +17,7 @@ export default function IntakePage({ params }: { params: { id: string } }) {
   ]);
   const [inputValue, setInputValue] = useState("");
   const [loading, setLoading] = useState(false);
-  const scrollRef = useRef<HTMLDivElement>(null);
+  const messagesEndRef = useRef<HTMLDivElement>(null);
   
   const [brief, setBrief] = useState<any>({
     idea_summary: null,
@@ -31,9 +31,7 @@ export default function IntakePage({ params }: { params: { id: string } }) {
   });
 
   useEffect(() => {
-    if (scrollRef.current) {
-      scrollRef.current.scrollTop = scrollRef.current.scrollHeight;
-    }
+    messagesEndRef.current?.scrollIntoView({ behavior: "smooth" });
   }, [messages]);
 
   const handleSubmit = async (e: React.FormEvent) => {
@@ -102,7 +100,7 @@ export default function IntakePage({ params }: { params: { id: string } }) {
           <p className="text-sm text-muted-foreground">Answer a few questions to build your product brief.</p>
         </div>
         
-        <ScrollArea className="flex-1 p-4" ref={scrollRef}>
+        <ScrollArea className="flex-1 p-4">
           <div className="space-y-4">
             {messages.map((msg, i) => (
               <div key={i} className={`flex ${msg.role === "user" ? "justify-end" : "justify-start"}`}>
@@ -123,6 +121,7 @@ export default function IntakePage({ params }: { params: { id: string } }) {
                 </div>
               </div>
             )}
+            <div ref={messagesEndRef} />
           </div>
         </ScrollArea>
         

@@ -59,13 +59,13 @@ Output must strictly match the JSON schema.
 
     try:
         response = client.models.generate_content(
-            model='gemini-2.0-flash',
+            model='gemini-2.5-flash',
             contents=prompt,
             config=types.GenerateContentConfig(
                 system_instruction=system_instruction,
                 response_mime_type="application/json",
                 response_schema=IntakeBriefSchema,
-                temperature=0.7,
+                temperature=0.2,
             ),
         )
         
