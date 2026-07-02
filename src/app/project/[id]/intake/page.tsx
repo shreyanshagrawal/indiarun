@@ -126,6 +126,26 @@ export default function IntakePage({ params }: { params: { id: string } }) {
         </ScrollArea>
         
         <div className="p-4 border-t">
+          <div className="flex gap-2 mb-3">
+            <Button 
+              type="button" 
+              variant="outline" 
+              size="sm"
+              className="text-xs flex-1"
+              onClick={() => setInputValue("I want to build an AI-powered note taking app for college students. They struggle with organizing lectures. The solution should auto-summarize audio and create flashcards, with a budget of $5000 and a 3-month timeline. This is a software product.")}
+            >
+              Demo: Software App
+            </Button>
+            <Button 
+              type="button" 
+              variant="outline" 
+              size="sm"
+              className="text-xs flex-1"
+              onClick={() => setInputValue("I want to build a self-cleaning reusable water bottle for outdoor enthusiasts. They hate the smell of old bottles. The solution is UV-C light in the cap, with a budget of $50,000 and 6-month timeline. This is a physical product.")}
+            >
+              Demo: Physical Product
+            </Button>
+          </div>
           <form onSubmit={handleSubmit} className="relative flex items-center">
             <Input
               value={inputValue}

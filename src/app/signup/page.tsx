@@ -61,6 +61,18 @@ export default function SignupPage() {
             <Button type="submit" className="w-full" disabled={loading}>
               {loading ? "Signing up..." : "Sign up"}
             </Button>
+            <Button 
+              type="button" 
+              variant="secondary" 
+              className="w-full mt-2" 
+              onClick={() => {
+                setName("Demo Judge");
+                setEmail(`judge_${Math.floor(Math.random() * 10000)}@test.com`);
+                setPassword("test12345");
+              }}
+            >
+              Fill Demo Judge Account
+            </Button>
           </form>
         </CardContent>
         <CardFooter className="flex justify-center">

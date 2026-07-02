@@ -56,6 +56,17 @@ export default function LoginPage() {
             <Button type="submit" className="w-full" disabled={loading}>
               {loading ? "Logging in..." : "Log in"}
             </Button>
+            <Button 
+              type="button" 
+              variant="secondary" 
+              className="w-full mt-2" 
+              onClick={() => {
+                setEmail("e2e_test@test.com");
+                setPassword("test12345");
+              }}
+            >
+              Fill Demo Judge Account
+            </Button>
           </form>
         </CardContent>
         <CardFooter className="flex justify-center">
