@@ -7,6 +7,7 @@ import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { ArrowLeft, Loader2, Play, ExternalLink, Download, AlertTriangle } from "lucide-react";
 import { fetchWithAuth } from "@/lib/api";
 import { API_BASE_URL } from "@/lib/api";
+import { SseErrorBanner } from "@/components/SseErrorBanner";
 
 export default function PrototypePage() {
   const params = useParams();
@@ -17,6 +18,7 @@ export default function PrototypePage() {
   const [prototype, setPrototype] = useState<any>(null); // eslint-disable-line @typescript-eslint/no-explicit-any
   const [generating, setGenerating] = useState(false);
   const [logs, setLogs] = useState<string[]>([]);
+  const [sseError, setSseError] = useState<string | null>(null);
   const logsEndRef = useRef<HTMLDivElement>(null);
 
   useEffect(() => {
@@ -45,6 +47,7 @@ export default function PrototypePage() {
   const generatePrototype = async () => {
     setGenerating(true);
     setLogs([]);
+    setSseError(null);
     const token = localStorage.getItem("token") || "";
 
     try {
@@ -53,6 +56,7 @@ export default function PrototypePage() {
         headers: { "Authorization": `Bearer ${token}` }
       });
 
+      if (!response.ok) throw new Error(`Server error ${response.status}`);
       if (!response.body) throw new Error("No response body");
 
       const reader = response.body.getReader();
@@ -74,7 +78,7 @@ export default function PrototypePage() {
                 } else if (parsed.type === "final_output") {
                   await fetchPrototype();
                 } else if (parsed.type === "error") {
-                  setLogs((prev) => [...prev, `ERROR: ${parsed.message}`]);
+                  setSseError(parsed.message || "Prototype generation failed.");
                 }
               } catch {
                 // Ignore parse errors from incomplete chunks
@@ -83,9 +87,9 @@ export default function PrototypePage() {
           }
         }
       }
-    } catch (e) {
+    } catch (e: any) {
       console.error(e);
-      setLogs((prev) => [...prev, "ERROR: Connection failed."]);
+      setSseError(e.message || "Connection failed — please try again.");
     } finally {
       setGenerating(false);
     }
@@ -215,6 +219,13 @@ export default function PrototypePage() {
                 ))}
                 <div ref={logsEndRef} />
               </div>
+            )}
+            {sseError && (
+              <SseErrorBanner
+                message={sseError}
+                onRetry={generatePrototype}
+                retrying={generating}
+              />
             )}
           </CardContent>
         </Card>

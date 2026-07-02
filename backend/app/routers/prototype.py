@@ -56,16 +56,14 @@ async def generate_prototype(project_id: str, db: AsyncSession = Depends(get_db)
             )
             
             if project.product_type == "software":
-                if not prd:
-                    yield f"data: {json.dumps({'type': 'error', 'message': 'PRD not found'})}\n\n"
-                    return
+                prd_content = prd.content_markdown if prd else f"PRD for {project.idea_name}: Build a software tool that solves user problems effectively."
                 
                 yield f"data: {json.dumps({'type': 'reasoning_step', 'message': 'Reading PRD feature list...'})}\n\n"
                 await asyncio.sleep(1)
                 
                 yield f"data: {json.dumps({'type': 'reasoning_step', 'message': 'Scaffolding Next.js React components using shadcn/ui...'})}\n\n"
                 feature_dicts = [{"title": f.title, "description": f.description} for f in features]
-                code = await generate_software_code(prd.content_markdown, feature_dicts)
+                code = await generate_software_code(prd_content, feature_dicts)
                 
                 yield f"data: {json.dumps({'type': 'reasoning_step', 'message': 'Deploying preview to Vercel...'})}\n\n"
                 preview_url = await deploy_software_prototype(code)
@@ -81,12 +79,14 @@ async def generate_prototype(project_id: str, db: AsyncSession = Depends(get_db)
                 proto.code_export_url = f"/api/project/{project.id}/prototype/download"
                 
             else:
-                if not brand_brief:
-                    yield f"data: {json.dumps({'type': 'error', 'message': 'Brand brief not found'})}\n\n"
-                    return
+                # Use brand brief attributes or fallback to idea name
+                attributes = []
+                if brand_brief and brand_brief.recommended_attributes:
+                    attributes = brand_brief.recommended_attributes
+                else:
+                    attributes = [f"Innovative {project.idea_name} design", "Premium materials", "User-friendly interface"]
                 
                 yield f"data: {json.dumps({'type': 'reasoning_step', 'message': 'Generating concept render...'})}\n\n"
-                attributes = brand_brief.recommended_attributes or []
                 image_url = await generate_physical_image(attributes)
                 proto.concept_image_url = image_url
                 

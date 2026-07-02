@@ -8,6 +8,7 @@ import { ArrowLeft, Loader2, Sparkles, ChevronRight, BarChart3, AlertTriangle, L
 import { fetchWithAuth, API_BASE_URL } from "@/lib/api";
 import ReactMarkdown from "react-markdown";
 import { Badge } from "@/components/ui/badge";
+import { SseErrorBanner } from "@/components/SseErrorBanner";
 
 export default function WhitespacePage() {
   const params = useParams();
@@ -19,6 +20,7 @@ export default function WhitespacePage() {
 
   const [loading, setLoading] = useState(false);
   const [steps, setSteps] = useState<string[]>([]);
+  const [sseError, setSseError] = useState<string | null>(null);
 
   useEffect(() => {
     const fetchData = async () => {
@@ -39,6 +41,7 @@ export default function WhitespacePage() {
   const handleGenerate = async () => {
     setLoading(true);
     setSteps([]);
+    setSseError(null);
     try {
       const token = localStorage.getItem("token");
       const response = await fetch(`${API_BASE_URL}/project/${projectId}/whitespace/generate`, {
@@ -50,11 +53,11 @@ export default function WhitespacePage() {
         body: JSON.stringify({})
       });
 
-      if (!response.ok) throw new Error("Failed to generate whitespace");
+      if (!response.ok) throw new Error(`Server error: ${response.status}`);
 
       const reader = response.body?.getReader();
       const decoder = new TextDecoder();
-      if (!reader) throw new Error("No reader");
+      if (!reader) throw new Error("No response stream available");
 
       let buffer = "";
 
@@ -75,7 +78,6 @@ export default function WhitespacePage() {
                 setSteps(prev => [...prev, data.message]);
               } else if (data.type === "final_output") {
                 setSteps(prev => [...prev, "Refreshing dashboard..."]);
-                // Refresh data
                 const res = await fetchWithAuth(`/project/${projectId}/whitespace`);
                 setData(res);
                 setLoading(false);
@@ -83,16 +85,16 @@ export default function WhitespacePage() {
               } else if (data.type === "error") {
                 throw new Error(data.message);
               }
-            } catch(e) {
-              console.error("Parse error", e);
+            } catch(e: any) {
+              if (e.message && !e.message.includes("JSON")) throw e;
             }
           }
         }
       }
-    } catch (err) {
+    } catch (err: any) {
       console.error(err);
+      setSseError(err.message || "Generation failed — please try again.");
       setLoading(false);
-      alert("Error generating whitespace. Check backend logs.");
     }
   };
 
@@ -320,6 +322,13 @@ export default function WhitespacePage() {
               </>
             )}
           </div>
+          {sseError && (
+            <SseErrorBanner
+              message={sseError}
+              onRetry={handleGenerate}
+              retrying={loading}
+            />
+          )}
         </CardContent>
       </Card>
     </div>

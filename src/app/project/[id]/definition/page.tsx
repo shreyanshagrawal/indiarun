@@ -12,8 +12,8 @@ import { Textarea } from "@/components/ui/textarea";
 import { ArrowLeft, Loader2, Download, FileText, Sparkles } from "lucide-react";
 import ReactMarkdown from "react-markdown";
 import { fetchWithAuth } from "@/lib/api";
-import { API_BASE_URL } from "@/lib/api"; // I will define this if it's not exported, or just manually fetch it. 
-// Wait, I can just use window.open for PDF. Let's see how I can do this cleanly.
+import { API_BASE_URL } from "@/lib/api";
+import { SseErrorBanner } from "@/components/SseErrorBanner";
 
 export default function DefinitionPage() {
   const params = useParams();
@@ -24,6 +24,7 @@ export default function DefinitionPage() {
   const [data, setData] = useState<any>(null);
   const [approving, setApproving] = useState(false);
   const [generating, setGenerating] = useState(false);
+  const [sseError, setSseError] = useState<string | null>(null);
 
   useEffect(() => {
     const fetchData = async () => {
@@ -108,15 +109,15 @@ export default function DefinitionPage() {
   const handleGenerateDefinition = async () => {
     try {
       setGenerating(true);
+      setSseError(null);
       await fetchWithAuth(`/project/${projectId}/definition/generate`, {
         method: "POST"
       });
-      // reload data
       const json = await fetchWithAuth(`/project/${projectId}/definition`);
       setData(json);
-    } catch (e) {
+    } catch (e: any) {
       console.error(e);
-      alert("Failed to generate definition");
+      setSseError(e.message || "Failed to generate definition — please try again.");
     } finally {
       setGenerating(false);
     }
@@ -201,6 +202,13 @@ export default function DefinitionPage() {
             Approve prioritization & PRD
           </Button>
         </div>
+        {sseError && (
+          <SseErrorBanner
+            message={sseError}
+            onRetry={handleGenerateDefinition}
+            retrying={generating}
+          />
+        )}
       </div>
 
       <Tabs defaultValue="personas" className="space-y-6">
