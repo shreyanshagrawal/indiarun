@@ -18,7 +18,7 @@ app = FastAPI(
 # ---------------------------------------------------------------------------
 app.add_middleware(
     CORSMiddleware,
-    allow_origins=[settings.FRONTEND_URL],
+    allow_origins=["*"],
     allow_credentials=True,
     allow_methods=["*"],
     allow_headers=["*"],
@@ -27,10 +27,16 @@ app.add_middleware(
 # ---------------------------------------------------------------------------
 # Routers
 # ---------------------------------------------------------------------------
-from app.routers import auth
+from app.routers import auth, projects, intake, whitespace, definition, prototype, gtm, tracking, overview
 app.include_router(auth.router)
 app.include_router(projects.router)
+app.include_router(intake.router)
 app.include_router(whitespace.router)
+app.include_router(definition.router)
+app.include_router(prototype.router)
+app.include_router(gtm.router)
+app.include_router(tracking.router)
+app.include_router(overview.router)
 
 
 @app.get("/health")
