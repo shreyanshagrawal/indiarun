@@ -14,3 +14,9 @@ python-multipart>=0.0.9
 google-genai==0.3.0
 weasyprint
 jinja2
+markdown
+beautifulsoup4
+duckduckgo-search
+pytrends
+transformers
+torch
