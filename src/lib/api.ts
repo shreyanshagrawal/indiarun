@@ -6,14 +6,22 @@ export async function fetchWithAuth(endpoint: string, options: RequestInit = {})
     token = localStorage.getItem("token") || "";
   }
 
-  const headers: Record<string, string> = {
-    ...(options.headers as Record<string, string> || {}),
-    "Content-Type": "application/json",
-  };
+  const headers = new Headers(options.headers);
+  headers.set("Content-Type", "application/json");
 
   if (token) {
-    headers["Authorization"] = `Bearer ${token}`;
+    headers.set("Authorization", `Bearer ${token}`);
   }
+
+  // --- MOCK AUTHENTICATION FOR UI PROTOTYPING ---
+  if (endpoint.startsWith("/auth/signup") || endpoint.startsWith("/auth/login")) {
+    return new Promise((resolve) => {
+      setTimeout(() => {
+        resolve({ access_token: "mock-jwt-token-123" });
+      }, 800); // 800ms delay to simulate network request
+    });
+  }
+  // ----------------------------------------------
 
   const response = await fetch(`${API_BASE_URL}${endpoint}`, {
     ...options,
